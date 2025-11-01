@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-box"></i> {{ product.name }}</h1>
+    <div>
+        <a href="{% url 'inventory:product_update' product.pk %}" class="btn btn-secondary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{% url 'inventory:transaction_create' %}?product={{ product.pk }}" class="btn btn-info">
+            <i class="bi bi-arrow-left-right"></i> Transaction
+        </a>
+        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Product Details -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Product Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>SKU:</strong></div>
+                    <div class="col-md-8">{{ product.sku }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Description:</strong></div>
+                    <div class="col-md-8">{{ product.description|default:"No description" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Category:</strong></div>
+                    <div class="col-md-8">{{ product.category.name|default:"Uncategorized" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Supplier:</strong></div>
+                    <div class="col-md-8">{{ product.supplier.name|default:"No supplier" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Created:</strong></div>
+                    <div class="col-md-8">{{ product.created_at|date:"F d, Y" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Last Updated:</strong></div>
+                    <div class="col-md-8">{{ product.updated_at|date:"F d, Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Transaction History</h5>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Reference</th>
+                                <th>Notes</th>
+                                <th>User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'IN' %}bg-success{% elif transaction.transaction_type == 'OUT' %}bg-danger{% else %}bg-info{% endif %}">
+                                        {{ transaction.get_transaction_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.quantity }}</td>
+                                <td>{{ transaction.reference|default:"-" }}</td>
+                                <td>{{ transaction.notes|default:"-" }}</td>
+                                <td>{{ transaction.created_by.username|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No transactions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar - Inventory & Pricing -->
+    <div class="col-md-4">
+        <!-- Stock Status -->
+        <div class="card mb-4">
+            <div class="card-header bg-{% if product.stock_status == 'Out of Stock' %}danger{% elif product.stock_status == 'Low Stock' %}warning{% else %}success{% endif %} text-white">
+                <h5 class="mb-0">Stock Status</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="{% if product.quantity == 0 %}text-danger{% elif product.is_low_stock %}text-warning{% else %}text-success{% endif %}">
+                    {{ product.quantity }}
+                </h2>
+                <p class="mb-0">
+                    <span class="badge bg-{% if product.stock_status == 'Out of Stock' %}danger{% elif product.stock_status == 'Low Stock' %}warning{% else %}success{% endif %}">
+                        {{ product.stock_status }}
+                    </span>
+                </p>
+                <small class="text-muted">Reorder Level: {{ product.reorder_level }}</small>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Pricing Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Cost Price:</strong>
+                    <h4>${{ product.cost_price|floatformat:2 }}</h4>
+                </div>
+                <div class="mb-3">
+                    <strong>Selling Price:</strong>
+                    <h4>${{ product.selling_price|floatformat:2 }}</h4>
+                </div>
+                <div>
+                    <strong>Profit Margin:</strong>
+                    <h4 class="text-success">{{ product.profit_margin|floatformat:1 }}%</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Image -->
+        {% if product.image %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Product Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded">
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

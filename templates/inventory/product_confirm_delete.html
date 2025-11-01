@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Product - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Confirm Delete</h4>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete the following product?</p>
+                <div class="alert alert-info">
+                    <strong>{{ product.name }}</strong><br>
+                    SKU: {{ product.sku }}<br>
+                    Current Stock: {{ product.quantity }}
+                </div>
+                <p class="text-muted"><small>This action will mark the product as inactive. You can reactivate it later from the admin panel.</small></p>
+            </div>
+            <div class="card-footer">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                    <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

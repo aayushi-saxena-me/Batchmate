@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Inventory Management{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Products</h5>
+                <h2 class="text-primary">{{ total_products }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <h5 class="card-title">Low Stock</h5>
+                <h2 class="text-warning">{{ low_stock_products }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <h5 class="card-title">Out of Stock</h5>
+                <h2 class="text-danger">{{ out_of_stock }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <h5 class="card-title">Total Value</h5>
+                <h2 class="text-success">${{ total_value|floatformat:2 }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quick Actions</h5>
+                <a href="{% url 'inventory:product_create' %}" class="btn btn-primary me-2">
+                    <i class="bi bi-plus-circle"></i> Add Product
+                </a>
+                <a href="{% url 'inventory:category_create' %}" class="btn btn-secondary me-2">
+                    <i class="bi bi-tag"></i> Add Category
+                </a>
+                <a href="{% url 'inventory:supplier_create' %}" class="btn btn-secondary me-2">
+                    <i class="bi bi-truck"></i> Add Supplier
+                </a>
+                <a href="{% url 'inventory:transaction_create' %}" class="btn btn-info">
+                    <i class="bi bi-arrow-left-right"></i> Process Transaction
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Alert -->
+{% if low_stock_items %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Low Stock Alert</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Current Stock</th>
+                                <th>Reorder Level</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in low_stock_items %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.sku }}</td>
+                                <td>
+                                    <span class="badge {% if product.quantity == 0 %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ product.quantity }}
+                                    </span>
+                                </td>
+                                <td>{{ product.reorder_level }}</td>
+                                <td>{{ product.stock_status }}</td>
+                                <td>
+                                    <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-sm btn-outline-primary">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Product</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Reference</th>
+                                <th>User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                                <td>{{ transaction.product.name }}</td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'IN' %}bg-success{% elif transaction.transaction_type == 'OUT' %}bg-danger{% else %}bg-info{% endif %}">
+                                        {{ transaction.get_transaction_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.quantity }}</td>
+                                <td>{{ transaction.reference|default:"-" }}</td>
+                                <td>{{ transaction.created_by.username|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No transactions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

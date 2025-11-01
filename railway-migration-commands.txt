@@ -1,0 +1,8 @@
+# Copy and paste these commands into Railway Shell:
+
+# 1. Run migrations (creates database tables)
+python manage.py migrate
+
+# 2. Create superuser account (for admin access)
+python manage.py createsuperuser
+

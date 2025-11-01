@@ -3,6 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, F
 from django.core.paginator import Paginator
+from django.utils import timezone
+from django.utils.safestring import mark_safe
+import json
+from datetime import timedelta
 from .models import Product, Category, Supplier, Transaction
 from .forms import ProductForm, CategoryForm, SupplierForm, TransactionForm
 
@@ -26,6 +30,70 @@ def dashboard(request):
         quantity__lte=F('reorder_level')
     ).order_by('quantity')[:10]
     
+    # Chart Data: Products by Category
+    category_data = Category.objects.annotate(
+        product_count=Count('product', filter=Q(product__is_active=True))
+    ).filter(product_count__gt=0).values('name', 'product_count')
+    category_labels = [cat['name'] for cat in category_data]
+    category_counts = [cat['product_count'] for cat in category_data]
+    
+    # Chart Data: Stock Status Distribution
+    in_stock_count = Product.objects.filter(is_active=True, quantity__gt=F('reorder_level')).count()
+    low_stock_count = low_stock_products - out_of_stock if low_stock_products > out_of_stock else 0
+    
+    # Chart Data: Transaction Types (last 30 days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    transaction_type_data = Transaction.objects.filter(
+        created_at__gte=thirty_days_ago
+    ).values('transaction_type').annotate(
+        count=Count('id')
+    ).order_by('transaction_type')
+    transaction_labels = [t['transaction_type'] for t in transaction_type_data]
+    transaction_counts = [t['count'] for t in transaction_type_data]
+    
+    # Chart Data: Transaction Trends (last 30 days by date)
+    from django.db import connection
+    if connection.vendor == 'sqlite':
+        # SQLite specific date extraction
+        transaction_trends = Transaction.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).extra(
+            select={'day': "date(created_at, 'localtime')"}
+        ).values('day').annotate(
+            count=Count('id')
+        ).order_by('day')
+    else:
+        # PostgreSQL/MySQL date extraction
+        transaction_trends = Transaction.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).extra(
+            select={'day': 'date(created_at)'}
+        ).values('day').annotate(
+            count=Count('id')
+        ).order_by('day')
+    
+    trend_dates = []
+    trend_counts = []
+    for t in transaction_trends:
+        if t['day']:
+            try:
+                if isinstance(t['day'], str):
+                    from datetime import datetime
+                    day_obj = datetime.strptime(t['day'], '%Y-%m-%d').date()
+                else:
+                    day_obj = t['day']
+                trend_dates.append(day_obj.strftime('%m/%d'))
+            except:
+                trend_dates.append(str(t['day'])[:10])
+            trend_counts.append(t['count'])
+    
+    # Chart Data: Top Products by Value
+    top_products_by_value = Product.objects.filter(is_active=True).annotate(
+        total_value=Sum(F('quantity') * F('cost_price'))
+    ).order_by('-total_value')[:10]
+    top_product_names = [p.name[:20] + '...' if len(p.name) > 20 else p.name for p in top_products_by_value]
+    top_product_values = [float(p.quantity * p.cost_price) for p in top_products_by_value]
+    
     context = {
         'total_products': total_products,
         'low_stock_products': low_stock_products,
@@ -33,6 +101,17 @@ def dashboard(request):
         'total_value': total_value,
         'recent_transactions': recent_transactions,
         'low_stock_items': low_stock_items,
+        # Chart data (as JSON strings for safe template rendering)
+        'category_labels': mark_safe(json.dumps(category_labels)),
+        'category_counts': mark_safe(json.dumps(category_counts)),
+        'in_stock_count': in_stock_count,
+        'low_stock_count': low_stock_count,
+        'transaction_labels': mark_safe(json.dumps(transaction_labels)),
+        'transaction_counts': mark_safe(json.dumps(transaction_counts)),
+        'trend_dates': mark_safe(json.dumps(trend_dates)),
+        'trend_counts': mark_safe(json.dumps(trend_counts)),
+        'top_product_names': mark_safe(json.dumps(top_product_names)),
+        'top_product_values': mark_safe(json.dumps(top_product_values)),
     }
     return render(request, 'inventory/dashboard.html', context)
 

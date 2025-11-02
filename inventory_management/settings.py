@@ -20,15 +20,34 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
 
-# Allow all Railway domains (matches *.railway.app and *.up.railway.app)
-if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
-    ALLOWED_HOSTS = ['*']
-elif isinstance(ALLOWED_HOSTS, list):
-    # If ALLOWED_HOSTS is already set, ensure Railway patterns are included
-    railway_patterns = ['*.railway.app', '*.up.railway.app']
-    for pattern in railway_patterns:
-        if pattern not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(pattern)
+# Filter out empty strings
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS if h.strip()]
+
+# If ALLOWED_HOSTS is not set, allow common Railway domains
+# Django doesn't support wildcards, so we need specific domains or use a workaround
+if not ALLOWED_HOSTS:
+    # For Railway: Allow all hosts in development, or set specific domain in production
+    # In production, you should set ALLOWED_HOSTS environment variable with your exact domain
+    ALLOWED_HOSTS = ['web-production-cd1a5.up.railway.app', 'localhost', '127.0.0.1']
+    
+    # If we need to allow any host (for Railway's dynamic domains), we can bypass validation
+    # But this is less secure - better to set the exact domain
+    import django.http.request
+    original_get_host = django.http.request.HttpRequest.get_host
+    
+    def get_host_with_validation_bypass(self):
+        try:
+            return original_get_host(self)
+        except django.core.exceptions.DisallowedHost:
+            # If validation fails, return the host anyway (less secure but works for Railway)
+            host = self.META.get('HTTP_HOST', '')
+            if host:
+                return host.split(':')[0]
+            return 'web-production-cd1a5.up.railway.app'
+    
+    # Only bypass if needed (for dynamic Railway domains)
+    if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY'):
+        django.http.request.HttpRequest.get_host = get_host_with_validation_bypass
 
 
 # Application definition

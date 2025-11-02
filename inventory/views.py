@@ -401,13 +401,13 @@ def healthcheck(request):
                         'orm_error': str(orm_error),
                         'suggestion': 'Run Django migrations: python manage.py migrate'
                     }
-        except Exception as e:
-            health_status['status'] = 'degraded'
-            health_status['checks']['database_tables'] = {
-                'status': 'unhealthy',
-                'message': f'Table check failed: {str(e)}',
-                'error_type': type(e).__name__
-            }
+    except Exception as e:
+        health_status['status'] = 'degraded'
+        health_status['checks']['database_tables'] = {
+            'status': 'unhealthy',
+            'message': f'Table check failed: {str(e)}',
+            'error_type': type(e).__name__
+        }
     
     # Check environment variables (masked for security)
     env_vars = {

@@ -20,11 +20,11 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
 
-# Allow all Railway domains
+# Allow all Railway domains (matches *.railway.app and *.up.railway.app)
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
     ALLOWED_HOSTS = ['*']
-else:
-    # Add Railway domain patterns if not already there
+elif isinstance(ALLOWED_HOSTS, list):
+    # If ALLOWED_HOSTS is already set, ensure Railway patterns are included
     railway_patterns = ['*.railway.app', '*.up.railway.app']
     for pattern in railway_patterns:
         if pattern not in ALLOWED_HOSTS:

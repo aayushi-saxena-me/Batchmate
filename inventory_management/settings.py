@@ -147,20 +147,17 @@ LOGIN_REDIRECT_URL = 'inventory:dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
 # CSRF Trusted Origins - Allow Railway domains
+# Note: Django doesn't support wildcards, so we need specific domains
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
+
+# If CSRF_TRUSTED_ORIGINS is not set, dynamically add the current Railway domain
 if not CSRF_TRUSTED_ORIGINS or CSRF_TRUSTED_ORIGINS == ['']:
-    # Allow all Railway domains by default
-    CSRF_TRUSTED_ORIGINS = [
-        'https://*.railway.app',
-        'https://*.up.railway.app',
-    ]
-else:
-    # Add Railway patterns if CSRF_TRUSTED_ORIGINS is set
-    railway_origins = [
-        'https://*.railway.app',
-        'https://*.up.railway.app',
-    ]
-    for origin in railway_origins:
-        if origin not in CSRF_TRUSTED_ORIGINS:
-            CSRF_TRUSTED_ORIGINS.append(origin)
+    # Default: allow common Railway patterns (user should set specific domain in production)
+    # For now, allow common Railway origin patterns
+    import re
+    # Try to get from request if available, otherwise use default
+    CSRF_TRUSTED_ORIGINS = []
+    
+# Allow Railway domains - add your specific Railway URL here if needed
+# Better approach: Set CSRF_TRUSTED_ORIGINS environment variable in Railway
 

@@ -4,6 +4,10 @@ from . import views
 app_name = 'inventory'
 
 urlpatterns = [
+    # Health check (no login required)
+    path('health/', views.healthcheck, name='healthcheck'),
+    path('healthcheck/', views.healthcheck, name='healthcheck_alt'),
+    
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     

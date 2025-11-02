@@ -5,7 +5,11 @@ from django.db.models import Q, Sum, Count, F
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from django.http import JsonResponse
+from django.db import connection
+from django.conf import settings
 import json
+import os
 from datetime import timedelta
 from .models import Product, Category, Supplier, Transaction
 from .forms import ProductForm, CategoryForm, SupplierForm, TransactionForm
@@ -295,4 +299,81 @@ def transaction_create(request):
                 pass
     
     return render(request, 'inventory/transaction_form.html', {'form': form, 'title': 'Process Transaction'})
+
+
+def healthcheck(request):
+    """
+    Healthcheck endpoint to monitor application status.
+    Accessible at /health/ or /healthcheck/
+    Returns JSON with application health metrics.
+    """
+    health_status = {
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'checks': {}
+    }
+    
+    # Check database connectivity
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        health_status['checks']['database'] = {
+            'status': 'healthy',
+            'message': 'Database connection successful'
+        }
+    except Exception as e:
+        health_status['status'] = 'degraded'
+        health_status['checks']['database'] = {
+            'status': 'unhealthy',
+            'message': f'Database connection failed: {str(e)}'
+        }
+    
+    # Check database tables exist
+    try:
+        Product.objects.exists()
+        Category.objects.exists()
+        Supplier.objects.exists()
+        health_status['checks']['database_tables'] = {
+            'status': 'healthy',
+            'message': 'All required tables exist'
+        }
+    except Exception as e:
+        health_status['status'] = 'degraded'
+        health_status['checks']['database_tables'] = {
+            'status': 'unhealthy',
+            'message': f'Table check failed: {str(e)}'
+        }
+    
+    # Check environment variables (masked for security)
+    env_vars = {
+        'DEBUG': os.environ.get('DEBUG', 'Not set'),
+        'DATABASE_URL': 'Set' if os.environ.get('DATABASE_URL') else 'Not set',
+        'SECRET_KEY': 'Set' if os.environ.get('SECRET_KEY') else 'Not set',
+        'ALLOWED_HOSTS': settings.ALLOWED_HOSTS if hasattr(settings, 'ALLOWED_HOSTS') else 'Not set',
+        'CSRF_TRUSTED_ORIGINS': len(settings.CSRF_TRUSTED_ORIGINS) if hasattr(settings, 'CSRF_TRUSTED_ORIGINS') else 0,
+    }
+    health_status['checks']['environment'] = {
+        'status': 'healthy',
+        'message': 'Environment variables checked',
+        'variables': env_vars
+    }
+    
+    # Check static files
+    try:
+        static_root = settings.STATIC_ROOT if hasattr(settings, 'STATIC_ROOT') else None
+        health_status['checks']['static_files'] = {
+            'status': 'healthy',
+            'message': 'Static files configured',
+            'static_root': str(static_root) if static_root else 'Not set'
+        }
+    except Exception as e:
+        health_status['checks']['static_files'] = {
+            'status': 'warning',
+            'message': f'Static files check: {str(e)}'
+        }
+    
+    # Return JSON response
+    status_code = 200 if health_status['status'] == 'healthy' else 503
+    return JsonResponse(health_status, status=status_code)
 

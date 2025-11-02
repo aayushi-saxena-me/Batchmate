@@ -112,7 +112,7 @@ This guide covers multiple deployment options for your Django inventory manageme
    - Name: `inventory-management`
    - Environment: `Python 3`
    - Build Command: (auto-detected from render.yaml)
-   - Start Command: `gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT`
+   - Start Command: `gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000`
 
 4. **Add PostgreSQL Database**
    - Click "New +" → "PostgreSQL"

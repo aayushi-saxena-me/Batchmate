@@ -92,7 +92,7 @@ Sometimes Railway needs help knowing how to start your app.
 4. Find **"Start Command"**
 5. Make sure it says:
    ```
-   gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT
+   gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000
    ```
 6. If it's different, change it to the above
 7. Click **"Save"** if you changed it

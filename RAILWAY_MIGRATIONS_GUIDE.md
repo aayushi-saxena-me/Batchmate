@@ -109,7 +109,7 @@ Create a file `railway-start.sh`:
 ```bash
 #!/bin/bash
 python manage.py migrate
-gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT
+gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000
 ```
 
 Then set this as your start command in Railway settings.
@@ -123,7 +123,7 @@ Then set this as your start command in Railway settings.
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate && gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT",
+    "startCommand": "python manage.py migrate && gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

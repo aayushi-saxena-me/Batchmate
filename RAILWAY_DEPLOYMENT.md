@@ -84,7 +84,7 @@ pip install -r requirements.txt
 
 **Start Command:**
 ```
-gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT
+gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000
 ```
 
 **Note:** Railway automatically sets the `$PORT` variable.

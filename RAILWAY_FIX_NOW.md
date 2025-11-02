@@ -24,7 +24,7 @@ Let's fix both!
 
 5. **Replace whatever is there with this:**
    ```
-   gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT
+   gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000
    ```
 
 6. **Click "Save" or the checkmark** (if there is one)

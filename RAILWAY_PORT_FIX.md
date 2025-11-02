@@ -37,7 +37,7 @@ If you prefer to keep using Dockerfile, fix it in Railway:
    ```
    OR simply:
    ```
-   python manage.py migrate && gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT
+   python manage.py migrate && gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000
    ```
 6. Save changes
 7. Railway will redeploy

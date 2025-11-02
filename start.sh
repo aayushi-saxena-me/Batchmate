@@ -9,7 +9,7 @@ PORT=${PORT:-8000}
 
 # Start gunicorn
 exec gunicorn inventory_management.wsgi:application \
-    --bind "0.0.0.0:$PORT" \
+    --bind "0.0.0.0:8000" \
     --workers 2 \
     --timeout 120 \
     --access-logfile - \

@@ -29,7 +29,7 @@
 3. Connect GitHub repo
 4. Settings:
    - Build Command: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
-   - Start Command: `gunicorn inventory_management.wsgi:application --bind 0.0.0.0:$PORT`
+   - Start Command: `gunicorn inventory_management.wsgi:application --bind 0.0.0.0:8000`
 5. Add PostgreSQL database (New + → PostgreSQL)
 6. Set environment variables (same as Railway)
 7. Deploy!

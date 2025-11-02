@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 from django.http import JsonResponse
 from django.db import connection
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 import json
 import os
 from datetime import timedelta
@@ -301,15 +302,22 @@ def transaction_create(request):
     return render(request, 'inventory/transaction_form.html', {'form': form, 'title': 'Process Transaction'})
 
 
+@csrf_exempt
 def healthcheck(request):
     """
     Healthcheck endpoint to monitor application status.
     Accessible at /health/ or /healthcheck/
     Returns JSON with application health metrics.
+    No login required, bypasses CSRF.
     """
     health_status = {
         'status': 'healthy',
         'timestamp': timezone.now().isoformat(),
+        'request_info': {
+            'host': request.get_host(),
+            'method': request.method,
+            'path': request.path,
+        },
         'checks': {}
     }
     
@@ -350,8 +358,9 @@ def healthcheck(request):
         'DEBUG': os.environ.get('DEBUG', 'Not set'),
         'DATABASE_URL': 'Set' if os.environ.get('DATABASE_URL') else 'Not set',
         'SECRET_KEY': 'Set' if os.environ.get('SECRET_KEY') else 'Not set',
-        'ALLOWED_HOSTS': settings.ALLOWED_HOSTS if hasattr(settings, 'ALLOWED_HOSTS') else 'Not set',
-        'CSRF_TRUSTED_ORIGINS': len(settings.CSRF_TRUSTED_ORIGINS) if hasattr(settings, 'CSRF_TRUSTED_ORIGINS') else 0,
+        'ALLOWED_HOSTS': list(settings.ALLOWED_HOSTS) if hasattr(settings, 'ALLOWED_HOSTS') else 'Not set',
+        'CSRF_TRUSTED_ORIGINS': list(settings.CSRF_TRUSTED_ORIGINS) if hasattr(settings, 'CSRF_TRUSTED_ORIGINS') else [],
+        'HOST_MATCH': request.get_host() in settings.ALLOWED_HOSTS if hasattr(settings, 'ALLOWED_HOSTS') else False,
     }
     health_status['checks']['environment'] = {
         'status': 'healthy',

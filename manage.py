@@ -6,7 +6,11 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
+    # Auto-detect production environment (same logic as wsgi.py)
+    if os.environ.get('DATABASE_URL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER'):
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings_production')
+    else:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

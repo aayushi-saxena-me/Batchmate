@@ -339,19 +339,75 @@ def healthcheck(request):
     
     # Check database tables exist
     try:
-        Product.objects.exists()
-        Category.objects.exists()
-        Supplier.objects.exists()
-        health_status['checks']['database_tables'] = {
-            'status': 'healthy',
-            'message': 'All required tables exist'
-        }
-    except Exception as e:
-        health_status['status'] = 'degraded'
-        health_status['checks']['database_tables'] = {
-            'status': 'unhealthy',
-            'message': f'Table check failed: {str(e)}'
-        }
+        # First check if tables exist using raw SQL (more reliable than ORM)
+        with connection.cursor() as cursor:
+            # Check if tables exist in the database
+            if connection.vendor == 'postgresql':
+                cursor.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name IN ('inventory_product', 'inventory_category', 'inventory_supplier', 'inventory_transaction')
+                    ORDER BY table_name
+                """)
+                existing_tables = [row[0] for row in cursor.fetchall()]
+            elif connection.vendor == 'mysql':
+                cursor.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = DATABASE()
+                    AND table_name IN ('inventory_product', 'inventory_category', 'inventory_supplier', 'inventory_transaction')
+                    ORDER BY table_name
+                """)
+                existing_tables = [row[0] for row in cursor.fetchall()]
+            else:  # SQLite
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' 
+                    AND name IN ('inventory_product', 'inventory_category', 'inventory_supplier', 'inventory_transaction')
+                    ORDER BY name
+                """)
+                existing_tables = [row[0] for row in cursor.fetchall()]
+            
+            required_tables = ['inventory_product', 'inventory_category', 'inventory_supplier', 'inventory_transaction']
+            missing_tables = [t for t in required_tables if t not in existing_tables]
+            
+            if missing_tables:
+                health_status['status'] = 'degraded'
+                health_status['checks']['database_tables'] = {
+                    'status': 'unhealthy',
+                    'message': f'Missing tables: {", ".join(missing_tables)}',
+                    'existing_tables': existing_tables,
+                    'required_tables': required_tables
+                }
+            else:
+                # Tables exist, now try ORM access
+                try:
+                    Product.objects.exists()
+                    Category.objects.exists()
+                    Supplier.objects.exists()
+                    health_status['checks']['database_tables'] = {
+                        'status': 'healthy',
+                        'message': 'All required tables exist and are accessible via ORM',
+                        'existing_tables': existing_tables
+                    }
+                except Exception as orm_error:
+                    # Tables exist but ORM can't access them (migration issue?)
+                    health_status['status'] = 'degraded'
+                    health_status['checks']['database_tables'] = {
+                        'status': 'unhealthy',
+                        'message': f'Tables exist but ORM access failed: {str(orm_error)}',
+                        'existing_tables': existing_tables,
+                        'orm_error': str(orm_error),
+                        'suggestion': 'Run Django migrations: python manage.py migrate'
+                    }
+        except Exception as e:
+            health_status['status'] = 'degraded'
+            health_status['checks']['database_tables'] = {
+                'status': 'unhealthy',
+                'message': f'Table check failed: {str(e)}',
+                'error_type': type(e).__name__
+            }
     
     # Check environment variables (masked for security)
     env_vars = {

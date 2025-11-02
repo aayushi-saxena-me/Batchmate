@@ -41,7 +41,7 @@
     </style>
 </head>
 <body>
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated|default:False %}
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->

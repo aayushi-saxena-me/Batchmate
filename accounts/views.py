@@ -35,7 +35,13 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 def register_view(request):
     """User registration view"""
-    if request.user.is_authenticated:
+    # Safely check authentication
+    try:
+        is_authenticated = request.user.is_authenticated
+    except Exception:
+        is_authenticated = False
+    
+    if is_authenticated:
         return redirect('inventory:dashboard')
     
     if request.method == 'POST':
@@ -52,8 +58,15 @@ def register_view(request):
 
 
 def login_view(request):
-    """User login view"""
-    if request.user.is_authenticated:
+    """User login view with error handling"""
+    # Safely check authentication - don't fail if database is unavailable
+    try:
+        is_authenticated = request.user.is_authenticated
+    except Exception:
+        # If database check fails, assume not authenticated
+        is_authenticated = False
+    
+    if is_authenticated:
         return redirect('inventory:dashboard')
     
     if request.method == 'POST':

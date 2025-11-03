@@ -18,37 +18,40 @@ from .forms import ProductForm, CategoryForm, SupplierForm, TransactionForm
 
 @login_required
 def dashboard(request):
-    """Dashboard view with inventory overview"""
-    total_products = Product.objects.filter(is_active=True).count()
-    low_stock_products = Product.objects.filter(is_active=True, quantity__lte=F('reorder_level')).count()
-    out_of_stock = Product.objects.filter(is_active=True, quantity=0).count()
-    total_value = Product.objects.filter(is_active=True).aggregate(
+    """Dashboard view with inventory overview - user-specific data"""
+    # Filter all queries by logged-in user
+    user_products = Product.objects.filter(is_active=True, created_by=request.user)
+    
+    total_products = user_products.count()
+    low_stock_products = user_products.filter(quantity__lte=F('reorder_level')).count()
+    out_of_stock = user_products.filter(quantity=0).count()
+    total_value = user_products.aggregate(
         total=Sum(F('quantity') * F('cost_price'))
     )['total'] or 0
     
-    # Recent transactions
-    recent_transactions = Transaction.objects.select_related('product').order_by('-created_at')[:10]
+    # Recent transactions - only user's transactions
+    recent_transactions = Transaction.objects.filter(created_by=request.user).select_related('product').order_by('-created_at')[:10]
     
-    # Low stock products
-    low_stock_items = Product.objects.filter(
-        is_active=True,
+    # Low stock products - only user's products
+    low_stock_items = user_products.filter(
         quantity__lte=F('reorder_level')
     ).order_by('quantity')[:10]
     
-    # Chart Data: Products by Category
-    category_data = Category.objects.annotate(
-        product_count=Count('product', filter=Q(product__is_active=True))
+    # Chart Data: Products by Category - only user's categories
+    category_data = Category.objects.filter(created_by=request.user).annotate(
+        product_count=Count('product', filter=Q(product__is_active=True, product__created_by=request.user))
     ).filter(product_count__gt=0).values('name', 'product_count')
     category_labels = [cat['name'] for cat in category_data]
     category_counts = [cat['product_count'] for cat in category_data]
     
-    # Chart Data: Stock Status Distribution
-    in_stock_count = Product.objects.filter(is_active=True, quantity__gt=F('reorder_level')).count()
+    # Chart Data: Stock Status Distribution - only user's products
+    in_stock_count = user_products.filter(quantity__gt=F('reorder_level')).count()
     low_stock_count = low_stock_products - out_of_stock if low_stock_products > out_of_stock else 0
     
-    # Chart Data: Transaction Types (last 30 days)
+    # Chart Data: Transaction Types (last 30 days) - only user's transactions
     thirty_days_ago = timezone.now() - timedelta(days=30)
     transaction_type_data = Transaction.objects.filter(
+        created_by=request.user,
         created_at__gte=thirty_days_ago
     ).values('transaction_type').annotate(
         count=Count('id')
@@ -56,11 +59,12 @@ def dashboard(request):
     transaction_labels = [t['transaction_type'] for t in transaction_type_data]
     transaction_counts = [t['count'] for t in transaction_type_data]
     
-    # Chart Data: Transaction Trends (last 30 days by date)
+    # Chart Data: Transaction Trends (last 30 days by date) - only user's transactions
     from django.db import connection
     if connection.vendor == 'sqlite':
         # SQLite specific date extraction
         transaction_trends = Transaction.objects.filter(
+            created_by=request.user,
             created_at__gte=thirty_days_ago
         ).extra(
             select={'day': "date(created_at, 'localtime')"}
@@ -70,6 +74,7 @@ def dashboard(request):
     else:
         # PostgreSQL/MySQL date extraction
         transaction_trends = Transaction.objects.filter(
+            created_by=request.user,
             created_at__gte=thirty_days_ago
         ).extra(
             select={'day': 'date(created_at)'}
@@ -92,8 +97,8 @@ def dashboard(request):
                 trend_dates.append(str(t['day'])[:10])
             trend_counts.append(t['count'])
     
-    # Chart Data: Top Products by Value
-    top_products_by_value = Product.objects.filter(is_active=True).annotate(
+    # Chart Data: Top Products by Value - only user's products
+    top_products_by_value = user_products.annotate(
         total_value=Sum(F('quantity') * F('cost_price'))
     ).order_by('-total_value')[:10]
     top_product_names = [p.name[:20] + '...' if len(p.name) > 20 else p.name for p in top_products_by_value]
@@ -123,8 +128,9 @@ def dashboard(request):
 
 @login_required
 def product_list(request):
-    """List all products with search and filter"""
-    products = Product.objects.filter(is_active=True).select_related('category', 'supplier')
+    """List all products with search and filter - user-specific"""
+    # Filter products by logged-in user
+    products = Product.objects.filter(is_active=True, created_by=request.user).select_related('category', 'supplier')
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -135,10 +141,10 @@ def product_list(request):
             Q(description__icontains=search_query)
         )
     
-    # Filter by category
+    # Filter by category - only user's categories
     category_filter = request.GET.get('category', '')
     if category_filter:
-        products = products.filter(category_id=category_filter)
+        products = products.filter(category_id=category_filter, category__created_by=request.user)
     
     # Filter by stock status
     stock_filter = request.GET.get('stock', '')
@@ -156,7 +162,8 @@ def product_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    categories = Category.objects.all()
+    # Only show user's categories
+    categories = Category.objects.filter(created_by=request.user)
     
     context = {
         'page_obj': page_obj,
@@ -172,9 +179,11 @@ def product_list(request):
 
 @login_required
 def product_detail(request, pk):
-    """Product detail view"""
-    product = get_object_or_404(Product, pk=pk)
-    transactions = Transaction.objects.filter(product=product).order_by('-created_at')[:20]
+    """Product detail view - user-specific"""
+    # Only allow access to user's own products
+    product = get_object_or_404(Product, pk=pk, created_by=request.user)
+    # Only show user's transactions for this product
+    transactions = Transaction.objects.filter(product=product, created_by=request.user).order_by('-created_at')[:20]
     
     context = {
         'product': product,
@@ -185,9 +194,9 @@ def product_detail(request, pk):
 
 @login_required
 def product_create(request):
-    """Create a new product"""
+    """Create a new product - user-specific"""
     if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
+        form = ProductForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             product = form.save(commit=False)
             product.created_by = request.user
@@ -195,24 +204,25 @@ def product_create(request):
             messages.success(request, f'Product "{product.name}" created successfully!')
             return redirect('inventory:product_detail', pk=product.pk)
     else:
-        form = ProductForm()
+        form = ProductForm(user=request.user)
     
     return render(request, 'inventory/product_form.html', {'form': form, 'title': 'Add New Product'})
 
 
 @login_required
 def product_update(request, pk):
-    """Update an existing product"""
-    product = get_object_or_404(Product, pk=pk)
+    """Update an existing product - user-specific"""
+    # Only allow updating user's own products
+    product = get_object_or_404(Product, pk=pk, created_by=request.user)
     
     if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES, instance=product)
+        form = ProductForm(request.POST, request.FILES, instance=product, user=request.user)
         if form.is_valid():
             product = form.save()
             messages.success(request, f'Product "{product.name}" updated successfully!')
             return redirect('inventory:product_detail', pk=product.pk)
     else:
-        form = ProductForm(instance=product)
+        form = ProductForm(instance=product, user=request.user)
     
     return render(request, 'inventory/product_form.html', {
         'form': form,
@@ -223,8 +233,9 @@ def product_update(request, pk):
 
 @login_required
 def product_delete(request, pk):
-    """Delete a product (soft delete by setting is_active=False)"""
-    product = get_object_or_404(Product, pk=pk)
+    """Delete a product (soft delete by setting is_active=False) - user-specific"""
+    # Only allow deleting user's own products
+    product = get_object_or_404(Product, pk=pk, created_by=request.user)
     
     if request.method == 'POST':
         product.is_active = False
@@ -237,18 +248,21 @@ def product_delete(request, pk):
 
 @login_required
 def category_list(request):
-    """List all categories"""
-    categories = Category.objects.all()
+    """List all categories - user-specific"""
+    # Only show user's categories
+    categories = Category.objects.filter(created_by=request.user)
     return render(request, 'inventory/category_list.html', {'categories': categories})
 
 
 @login_required
 def category_create(request):
-    """Create a new category"""
+    """Create a new category - user-specific"""
     if request.method == 'POST':
         form = CategoryForm(request.POST)
         if form.is_valid():
-            category = form.save()
+            category = form.save(commit=False)
+            category.created_by = request.user
+            category.save()
             messages.success(request, f'Category "{category.name}" created successfully!')
             return redirect('inventory:category_list')
     else:
@@ -259,18 +273,21 @@ def category_create(request):
 
 @login_required
 def supplier_list(request):
-    """List all suppliers"""
-    suppliers = Supplier.objects.all()
+    """List all suppliers - user-specific"""
+    # Only show user's suppliers
+    suppliers = Supplier.objects.filter(created_by=request.user)
     return render(request, 'inventory/supplier_list.html', {'suppliers': suppliers})
 
 
 @login_required
 def supplier_create(request):
-    """Create a new supplier"""
+    """Create a new supplier - user-specific"""
     if request.method == 'POST':
         form = SupplierForm(request.POST)
         if form.is_valid():
-            supplier = form.save()
+            supplier = form.save(commit=False)
+            supplier.created_by = request.user
+            supplier.save()
             messages.success(request, f'Supplier "{supplier.name}" created successfully!')
             return redirect('inventory:supplier_list')
     else:
@@ -281,21 +298,29 @@ def supplier_create(request):
 
 @login_required
 def transaction_create(request):
-    """Create a new transaction"""
+    """Create a new transaction - user-specific"""
     if request.method == 'POST':
-        form = TransactionForm(request.POST)
+        form = TransactionForm(request.POST, user=request.user)
         if form.is_valid():
             transaction = form.save(commit=False)
             transaction.created_by = request.user
+            # Ensure product belongs to user
+            if transaction.product.created_by != request.user:
+                messages.error(request, 'You can only create transactions for your own products.')
+                form = TransactionForm(user=request.user)
+                return render(request, 'inventory/transaction_form.html', {'form': form, 'title': 'Process Transaction'})
             transaction.save()
             messages.success(request, 'Transaction processed successfully!')
             return redirect('inventory:product_detail', pk=transaction.product.pk)
     else:
-        form = TransactionForm()
+        form = TransactionForm(user=request.user)
         product_id = request.GET.get('product')
         if product_id:
             try:
-                form.fields['product'].initial = int(product_id)
+                product_id_int = int(product_id)
+                # Verify product belongs to user
+                if Product.objects.filter(pk=product_id_int, created_by=request.user).exists():
+                    form.fields['product'].initial = product_id_int
             except ValueError:
                 pass
     

@@ -6,14 +6,16 @@ from decimal import Decimal
 
 class Category(models.Model):
     """Product category model"""
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='categories')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ['name']
+        unique_together = [['name', 'created_by']]  # Category names unique per user
 
     def __str__(self):
         return self.name
@@ -26,11 +28,13 @@ class Supplier(models.Model):
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='suppliers')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['name']
+        unique_together = [['name', 'created_by']]  # Supplier names unique per user
 
     def __str__(self):
         return self.name
@@ -40,7 +44,7 @@ class Product(models.Model):
     """Product model"""
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    sku = models.CharField(max_length=50, unique=True, help_text="Stock Keeping Unit")
+    sku = models.CharField(max_length=50, help_text="Stock Keeping Unit")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True)
     
@@ -56,16 +60,18 @@ class Product(models.Model):
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     
     # Metadata
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_products')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['name']
+        unique_together = [['sku', 'created_by']]  # SKU unique per user
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['name']),
+            models.Index(fields=['created_by']),
         ]
 
     def __str__(self):
@@ -108,7 +114,7 @@ class Transaction(models.Model):
     quantity = models.IntegerField(help_text="Enter quantity (always positive). Transaction type determines if stock increases or decreases.")
     reference = models.CharField(max_length=100, blank=True, help_text="Invoice, PO, etc.")
     notes = models.TextField(blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

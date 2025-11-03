@@ -18,7 +18,14 @@ class ProductForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Limit category and supplier choices to user's data
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(created_by=user)
+            self.fields['supplier'].queryset = Supplier.objects.filter(created_by=user)
+        
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
@@ -92,7 +99,13 @@ class TransactionForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Limit product choices to user's products
+        if user:
+            self.fields['product'].queryset = Product.objects.filter(created_by=user, is_active=True)
+        
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(

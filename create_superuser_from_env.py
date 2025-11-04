@@ -17,8 +17,16 @@ import sys
 import django
 import time
 
-# Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
+# Setup Django - Auto-detect production environment
+# Use production settings if DATABASE_URL exists (Railway/Render/production)
+# Otherwise use development settings
+if os.environ.get('DATABASE_URL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER'):
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings_production')
+    print("🔧 Using production settings (PostgreSQL)")
+else:
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
+    print("🔧 Using development settings (SQLite)")
+
 try:
     django.setup()
 except Exception as e:
@@ -29,13 +37,21 @@ from django.contrib.auth.models import User
 from django.db import connection
 
 
-def wait_for_database(max_retries=5, delay=2):
+def wait_for_database(max_retries=10, delay=3):
     """Wait for database tables to be ready"""
+    print(f"⏳ Waiting for database to be ready (will check {max_retries} times, {delay}s apart)...")
+    
     for attempt in range(max_retries):
         try:
+            # Test database connection first
+            connection.ensure_connection()
+            db_engine = connection.vendor
+            db_name = connection.settings_dict.get('NAME', 'unknown')
+            
+            print(f"   Connected to {db_engine} database: {db_name[:50]}...")
+            
             # Check if auth_user table exists
             with connection.cursor() as cursor:
-                db_engine = connection.vendor
                 if db_engine == 'sqlite':
                     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_user';")
                 else:  # PostgreSQL
@@ -43,18 +59,20 @@ def wait_for_database(max_retries=5, delay=2):
                 table_exists = cursor.fetchone() is not None
             
             if table_exists:
-                print(f"✅ Database ready (auth_user table exists)")
+                print(f"✅ Database ready (auth_user table exists) - attempt {attempt + 1}")
                 return True
             else:
-                print(f"⏳ Waiting for database... (attempt {attempt + 1}/{max_retries})")
+                print(f"⏳ auth_user table not found yet... (attempt {attempt + 1}/{max_retries})")
                 if attempt < max_retries - 1:
                     time.sleep(delay)
         except Exception as e:
-            print(f"⏳ Database check failed (attempt {attempt + 1}/{max_retries}): {e}")
+            error_msg = str(e)[:100]  # Truncate long error messages
+            print(f"⏳ Database check failed (attempt {attempt + 1}/{max_retries}): {type(e).__name__}: {error_msg}")
             if attempt < max_retries - 1:
                 time.sleep(delay)
     
-    print(f"⚠️  Database not ready after {max_retries} attempts")
+    print(f"⚠️  Database not ready after {max_retries} attempts ({max_retries * delay} seconds)")
+    print("   This usually means migrations haven't completed yet")
     return False
 
 def create_superuser():

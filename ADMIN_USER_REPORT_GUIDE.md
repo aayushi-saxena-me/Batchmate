@@ -11,7 +11,7 @@ An admin-only dashboard that shows comprehensive statistics about all users in t
 
 ## Access
 
-**URL:** `http://127.0.0.1:8000/admin/user-report/`
+**URL:** `http://127.0.0.1:8000/reports/user-report/`
 
 **Requirements:** 
 - Must be logged in
@@ -65,7 +65,7 @@ You'll be prompted to enter:
 
 ### Option 2: Direct URL
 1. Login as superuser
-2. Navigate to: `http://127.0.0.1:8000/admin/user-report/`
+2. Navigate to: `http://127.0.0.1:8000/reports/user-report/`
 
 ### Option 3: From Django Admin
 1. Login to Django admin: `http://127.0.0.1:8000/admin/`
@@ -120,7 +120,7 @@ Joined: Jan 15, 2024
 
 ### "Page not found (404)"
 - **Cause:** URL might be incorrect
-- **Fix:** Use exact URL: `/admin/user-report/`
+- **Fix:** Use exact URL: `/reports/user-report/`
 
 ### Empty Table
 - **Cause:** No users in the system yet
@@ -133,7 +133,7 @@ Joined: Jan 15, 2024
 ## Integration with Django Admin
 
 The report is separate from Django's built-in admin but can be accessed alongside it. You can:
-- View the report at `/admin/user-report/`
+- View the report at `/reports/user-report/`
 - Access Django admin at `/admin/`
 - Both are available to superusers
 

@@ -164,5 +164,5 @@ After creating your superuser:
 1. ✅ Login to the application
 2. ✅ Access "Create Admin" link in sidebar (to create more admins)
 3. ✅ Access Django admin at `/admin/`
-4. ✅ View User Report at `/admin/user-report/`
+4. ✅ View User Report at `/reports/user-report/`
 

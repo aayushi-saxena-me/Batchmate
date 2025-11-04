@@ -65,7 +65,7 @@ if user:
         print("✅ User is now a superuser!")
         print("\nYou can now access:")
         print("  - Django Admin: http://127.0.0.1:8000/admin/")
-        print("  - User Report: http://127.0.0.1:8000/admin/user-report/")
+        print("  - User Report: http://127.0.0.1:8000/reports/user-report/")
         print("  - Create Admin: http://127.0.0.1:8000/accounts/create-superuser/")
     else:
         print("\n✅ User is already a superuser!")

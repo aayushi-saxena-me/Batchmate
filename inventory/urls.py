@@ -30,6 +30,6 @@ urlpatterns = [
     path('transactions/add/', views.transaction_create, name='transaction_create'),
     
     # Admin User Report (superuser only)
-    path('admin/user-report/', views.admin_user_report, name='admin_user_report'),
+    path('reports/user-report/', views.admin_user_report, name='admin_user_report'),
 ]
 

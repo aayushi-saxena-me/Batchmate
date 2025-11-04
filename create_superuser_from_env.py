@@ -29,27 +29,53 @@ from django.contrib.auth.models import User
 def create_superuser():
     """Create superuser from environment variables"""
     
+    # Debug: Print all environment variables (for troubleshooting)
+    print("🔍 Debug: Checking environment variables...")
+    all_vars = {k: v for k, v in os.environ.items() if 'SUPERUSER' in k or 'DJANGO' in k}
+    if all_vars:
+        print("   Found Django/Superuser variables:")
+        for key, value in all_vars.items():
+            # Mask password for security
+            if 'PASSWORD' in key:
+                print(f"     {key} = {'*' * len(value) if value else '(empty)'}")
+            else:
+                print(f"     {key} = '{value}'")
+    else:
+        print("   No DJANGO_SUPERUSER_* variables found")
+    
     # Get credentials from environment variables
-    username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
-    email = os.environ.get('DJANGO_SUPERUSER_EMAIL', '')
-    password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+    username = os.environ.get('DJANGO_SUPERUSER_USERNAME', '').strip()
+    email = os.environ.get('DJANGO_SUPERUSER_EMAIL', '').strip()
+    password = os.environ.get('DJANGO_SUPERUSER_PASSWORD', '').strip()
+    
+    print(f"\n📋 Values read:")
+    print(f"   Username: '{username}' (length: {len(username)})")
+    print(f"   Email: '{email}' (length: {len(email)})")
+    print(f"   Password: {'*' * len(password) if password else '(empty)'} (length: {len(password)})")
+    
+    # Check for placeholder values
+    placeholder_values = ['your_username', 'your_secure_password', 'admin@example.com', '']
     
     # Validate required fields
-    if not username:
-        print("❌ ERROR: DJANGO_SUPERUSER_USERNAME environment variable not set")
-        print("\nSet it in Railway:")
-        print("  Variables → New Variable")
-        print("  Name: DJANGO_SUPERUSER_USERNAME")
-        print("  Value: your_username")
-        sys.exit(1)
+    if not username or username.lower() in [p.lower() for p in placeholder_values if p]:
+        print("\n⚠️  WARNING: DJANGO_SUPERUSER_USERNAME not set or is placeholder")
+        print(f"   Current value: '{username}'")
+        print(f"   Is empty: {not username}")
+        print(f"   Is placeholder: {username.lower() in [p.lower() for p in placeholder_values if p]}")
+        print("\n   Skipping superuser creation (this is OK if you'll create it manually)")
+        print("   To enable auto-creation, set in Railway Variables:")
+        print("     Name: DJANGO_SUPERUSER_USERNAME")
+        print("     Value: admin (or your desired username)")
+        return  # Exit gracefully instead of failing
     
-    if not password:
-        print("❌ ERROR: DJANGO_SUPERUSER_PASSWORD environment variable not set")
-        print("\nSet it in Railway:")
-        print("  Variables → New Variable")
-        print("  Name: DJANGO_SUPERUSER_PASSWORD")
-        print("  Value: your_secure_password")
-        sys.exit(1)
+    if not password or password.lower() in [p.lower() for p in placeholder_values if p]:
+        print("\n⚠️  WARNING: DJANGO_SUPERUSER_PASSWORD not set or is placeholder")
+        print(f"   Password length: {len(password)}")
+        print("\n   Skipping superuser creation (this is OK if you'll create it manually)")
+        print("   To enable auto-creation, set in Railway Variables:")
+        print("     Name: DJANGO_SUPERUSER_PASSWORD")
+        print("     Value: your_secure_password_here")
+        return  # Exit gracefully instead of failing
     
     # Check if user already exists
     if User.objects.filter(username=username).exists():

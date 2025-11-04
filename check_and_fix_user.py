@@ -1,16 +1,54 @@
 #!/usr/bin/env python
 """Check and fix user permissions"""
 import os
+import sys
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
-django.setup()
 
-from django.contrib.auth.models import User
+try:
+    django.setup()
+except Exception as e:
+    print(f"\n❌ Error setting up Django: {e}")
+    sys.exit(1)
+
+try:
+    from django.contrib.auth.models import User
+    from django.db import connection
+    
+    # Check if auth_user table exists (works for both SQLite and PostgreSQL)
+    with connection.cursor() as cursor:
+        db_engine = connection.vendor
+        if db_engine == 'sqlite':
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_user';")
+        else:  # PostgreSQL, MySQL, etc.
+            cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='auth_user';")
+        table_exists = cursor.fetchone() is not None
+    
+    if not table_exists:
+        print("\n❌ ERROR: auth_user table does not exist!")
+        print("\nYou need to run migrations first:")
+        print("  python manage.py migrate")
+        print("\nOr in deployment:")
+        print("  railway run python manage.py migrate")
+        print("  # or")
+        print("  # In Railway dashboard: Deployments → Run Command → python manage.py migrate")
+        sys.exit(1)
+except Exception as e:
+    print(f"\n❌ Database error: {e}")
+    print("\nThis usually means migrations haven't been run.")
+    print("Run: python manage.py migrate")
+    sys.exit(1)
 
 # Find user by email or username
 email_or_username = 'aayushi.saxena.me@gmail.com'
-user = User.objects.filter(email=email_or_username).first() or User.objects.filter(username=email_or_username).first()
+try:
+    user = User.objects.filter(email=email_or_username).first() or User.objects.filter(username=email_or_username).first()
+except Exception as e:
+    print(f"\n❌ Error querying users: {e}")
+    print("\nThis usually means migrations haven't been run.")
+    print("Run: python manage.py migrate")
+    sys.exit(1)
 
 if user:
     print(f"\nUser found: {user.username}")

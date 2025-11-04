@@ -44,14 +44,53 @@ def create_superuser():
         print("   No DJANGO_SUPERUSER_* variables found")
     
     # Get credentials from environment variables
-    username = os.environ.get('DJANGO_SUPERUSER_USERNAME', '').strip()
-    email = os.environ.get('DJANGO_SUPERUSER_EMAIL', '').strip()
-    password = os.environ.get('DJANGO_SUPERUSER_PASSWORD', '').strip()
+    # Use the dict we built since os.environ.get() might have issues
+    username_raw = all_vars.get('DJANGO_SUPERUSER_USERNAME', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_USERNAME', '')
+    if not username_raw:
+        # Fallback: search for the key (case-insensitive)
+        for key, value in os.environ.items():
+            if key.upper() == 'DJANGO_SUPERUSER_USERNAME':
+                username_raw = value
+                print(f"   🔍 Found username via search: '{key}' = '{value}'")
+                break
     
+    username = username_raw.strip() if username_raw else ''
+    
+    email_raw = all_vars.get('DJANGO_SUPERUSER_EMAIL', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_EMAIL', '')
+    if not email_raw:
+        for key, value in os.environ.items():
+            if key.upper() == 'DJANGO_SUPERUSER_EMAIL':
+                email_raw = value
+                break
+    
+    email = email_raw.strip() if email_raw else ''
+    
+    password_raw = all_vars.get('DJANGO_SUPERUSER_PASSWORD', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_PASSWORD', '')
+    if not password_raw:
+        for key, value in os.environ.items():
+            if key.upper() == 'DJANGO_SUPERUSER_PASSWORD':
+                password_raw = value
+                break
+    
+    password = password_raw.strip() if password_raw else ''
+    
+    # Debug: Show what we found
     print(f"\n📋 Values read:")
     print(f"   Username: '{username}' (length: {len(username)})")
     print(f"   Email: '{email}' (length: {len(email)})")
     print(f"   Password: {'*' * len(password) if password else '(empty)'} (length: {len(password)})")
+    
+    # Alternative: Try reading directly from environment dict
+    try:
+        username_alt = os.environ['DJANGO_SUPERUSER_USERNAME'].strip()
+        print(f"   Username (direct access): '{username_alt}' (length: {len(username_alt)})")
+        if username_alt and not username:
+            print("   ⚠️  Direct access worked but .get() didn't - using direct value")
+            username = username_alt
+    except KeyError:
+        print("   ⚠️  Direct access also failed - variable not found")
+    except Exception as e:
+        print(f"   ⚠️  Error with direct access: {e}")
     
     # Check for placeholder values
     placeholder_values = ['your_username', 'your_secure_password', 'admin@example.com', '']

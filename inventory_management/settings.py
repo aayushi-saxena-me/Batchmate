@@ -163,7 +163,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Login URLs
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'inventory:dashboard'
-LOGOUT_REDIRECT_URL = 'accounts:login'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # CSRF Trusted Origins - Allow Railway domains
 # Django requires specific domains (no wildcards), so set the exact Railway URL

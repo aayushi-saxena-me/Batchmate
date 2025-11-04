@@ -72,9 +72,12 @@
                             </a>
                         </li>
                         <li class="nav-item mt-4">
-                            <a class="nav-link" href="{% url 'accounts:logout' %}">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a>
+                            <form method="post" action="{% url 'accounts:logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start" style="cursor: pointer;">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </button>
+                            </form>
                         </li>
                     </ul>
                     <div class="px-3 mt-4">

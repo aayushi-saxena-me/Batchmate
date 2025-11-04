@@ -15,6 +15,7 @@ Usage:
 import os
 import sys
 import django
+import time
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'inventory_management.settings')
@@ -25,9 +26,50 @@ except Exception as e:
     sys.exit(1)
 
 from django.contrib.auth.models import User
+from django.db import connection
+
+
+def wait_for_database(max_retries=5, delay=2):
+    """Wait for database tables to be ready"""
+    for attempt in range(max_retries):
+        try:
+            # Check if auth_user table exists
+            with connection.cursor() as cursor:
+                db_engine = connection.vendor
+                if db_engine == 'sqlite':
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_user';")
+                else:  # PostgreSQL
+                    cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='auth_user';")
+                table_exists = cursor.fetchone() is not None
+            
+            if table_exists:
+                print(f"✅ Database ready (auth_user table exists)")
+                return True
+            else:
+                print(f"⏳ Waiting for database... (attempt {attempt + 1}/{max_retries})")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+        except Exception as e:
+            print(f"⏳ Database check failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+    
+    print(f"⚠️  Database not ready after {max_retries} attempts")
+    return False
 
 def create_superuser():
     """Create superuser from environment variables"""
+    
+    # Wait for database to be ready (migrations might still be running)
+    print("🔍 Checking if database is ready...")
+    if not wait_for_database(max_retries=10, delay=3):
+        print("\n⚠️  Database not ready - migrations may still be running")
+        print("   Skipping automatic superuser creation")
+        print("\n   To create superuser manually after deployment:")
+        print("   1. Go to Railway Dashboard → Your service → Shell")
+        print("   2. Run: python manage.py createsuperuser")
+        print("   3. Enter username, email, password when prompted")
+        return
     
     # Debug: Print all environment variables (for troubleshooting)
     print("🔍 Debug: Checking environment variables...")

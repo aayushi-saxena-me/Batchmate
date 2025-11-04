@@ -32,65 +32,86 @@ def create_superuser():
     # Debug: Print all environment variables (for troubleshooting)
     print("🔍 Debug: Checking environment variables...")
     all_vars = {k: v for k, v in os.environ.items() if 'SUPERUSER' in k or 'DJANGO' in k}
+    
+    # Find the actual keys (handle any whitespace or case issues)
+    username_key = None
+    email_key = None
+    password_key = None
+    
     if all_vars:
         print("   Found Django/Superuser variables:")
         for key, value in all_vars.items():
             # Mask password for security
             if 'PASSWORD' in key:
                 print(f"     {key} = {'*' * len(value) if value else '(empty)'}")
+                if 'SUPERUSER' in key and not password_key:
+                    password_key = key
             else:
                 print(f"     {key} = '{value}'")
+                if 'USERNAME' in key and 'SUPERUSER' in key and not username_key:
+                    username_key = key
+                    print(f"        → Using this key for username: '{key}'")
+                elif 'EMAIL' in key and 'SUPERUSER' in key and not email_key:
+                    email_key = key
+                    print(f"        → Using this key for email: '{key}'")
     else:
         print("   No DJANGO_SUPERUSER_* variables found")
     
-    # Get credentials from environment variables
-    # Use the dict we built since os.environ.get() might have issues
-    username_raw = all_vars.get('DJANGO_SUPERUSER_USERNAME', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_USERNAME', '')
-    if not username_raw:
-        # Fallback: search for the key (case-insensitive)
-        for key, value in os.environ.items():
-            if key.upper() == 'DJANGO_SUPERUSER_USERNAME':
-                username_raw = value
-                print(f"   🔍 Found username via search: '{key}' = '{value}'")
-                break
+    # Get credentials using the actual keys we found during iteration
+    username_raw = ''
+    email_raw = ''
+    password_raw = ''
+    
+    if username_key and username_key in all_vars:
+        username_raw = all_vars[username_key]
+        print(f"\n   ✅ Username found using key '{username_key}': '{username_raw}'")
+    else:
+        # Fallback: try exact key
+        username_raw = all_vars.get('DJANGO_SUPERUSER_USERNAME', '') if all_vars else ''
+        if not username_raw:
+            # Fallback: search for the key (case-insensitive, handle whitespace)
+            for key, value in os.environ.items():
+                if 'USERNAME' in key and 'SUPERUSER' in key and 'DJANGO' in key:
+                    username_raw = value
+                    username_key = key
+                    print(f"   🔍 Found username via search: '{key}' = '{value}'")
+                    break
     
     username = username_raw.strip() if username_raw else ''
     
-    email_raw = all_vars.get('DJANGO_SUPERUSER_EMAIL', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_EMAIL', '')
-    if not email_raw:
-        for key, value in os.environ.items():
-            if key.upper() == 'DJANGO_SUPERUSER_EMAIL':
-                email_raw = value
-                break
+    if email_key and email_key in all_vars:
+        email_raw = all_vars[email_key]
+        print(f"   ✅ Email found using key '{email_key}': '{email_raw}'")
+    else:
+        email_raw = all_vars.get('DJANGO_SUPERUSER_EMAIL', '') if all_vars else ''
+        if not email_raw:
+            for key, value in os.environ.items():
+                if 'EMAIL' in key and 'SUPERUSER' in key and 'DJANGO' in key:
+                    email_raw = value
+                    email_key = key
+                    break
     
     email = email_raw.strip() if email_raw else ''
     
-    password_raw = all_vars.get('DJANGO_SUPERUSER_PASSWORD', '') if all_vars else os.environ.get('DJANGO_SUPERUSER_PASSWORD', '')
-    if not password_raw:
-        for key, value in os.environ.items():
-            if key.upper() == 'DJANGO_SUPERUSER_PASSWORD':
-                password_raw = value
-                break
+    if password_key and password_key in all_vars:
+        password_raw = all_vars[password_key]
+        print(f"   ✅ Password found using key '{password_key}'")
+    else:
+        password_raw = all_vars.get('DJANGO_SUPERUSER_PASSWORD', '') if all_vars else ''
+        if not password_raw:
+            for key, value in os.environ.items():
+                if 'PASSWORD' in key and 'SUPERUSER' in key and 'DJANGO' in key:
+                    password_raw = value
+                    password_key = key
+                    break
     
     password = password_raw.strip() if password_raw else ''
     
     # Debug: Show what we found
-    print(f"\n📋 Values read:")
+    print(f"\n📋 Final values:")
     print(f"   Username: '{username}' (length: {len(username)})")
     print(f"   Email: '{email}' (length: {len(email)})")
     print(f"   Password: {'*' * len(password) if password else '(empty)'} (length: {len(password)})")
-    
-    # Alternative: Try reading directly from environment dict
-    try:
-        username_alt = os.environ['DJANGO_SUPERUSER_USERNAME'].strip()
-        print(f"   Username (direct access): '{username_alt}' (length: {len(username_alt)})")
-        if username_alt and not username:
-            print("   ⚠️  Direct access worked but .get() didn't - using direct value")
-            username = username_alt
-    except KeyError:
-        print("   ⚠️  Direct access also failed - variable not found")
-    except Exception as e:
-        print(f"   ⚠️  Error with direct access: {e}")
     
     # Check for placeholder values
     placeholder_values = ['your_username', 'your_secure_password', 'admin@example.com', '']

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Superuser - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-person-plus"></i> Create New Admin User
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Create User
+                        </button>
+                        <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Existing Superusers -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-check"></i> Superusers
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if existing_superusers %}
+                    <ul class="list-group list-group-flush">
+                        {% for user in existing_superusers %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ user.username }}</strong>
+                                {% if user.email %}
+                                    <br><small class="text-muted">{{ user.email }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-danger">Superuser</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No superusers found.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Existing Staff Users -->
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge"></i> Staff Users
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if existing_staff %}
+                    <ul class="list-group list-group-flush">
+                        {% for user in existing_staff %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ user.username }}</strong>
+                                {% if user.email %}
+                                    <br><small class="text-muted">{{ user.email }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-warning text-dark">Staff</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No staff users found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h5><i class="bi bi-info-circle"></i> About User Types</h5>
+    <ul class="mb-0">
+        <li><strong>Superuser:</strong> Full administrative access, can create other admins, access all data</li>
+        <li><strong>Staff:</strong> Can access Django admin panel but limited permissions</li>
+        <li><strong>Regular User:</strong> Can only access their own inventory data</li>
+    </ul>
+</div>
+{% endblock %}
+

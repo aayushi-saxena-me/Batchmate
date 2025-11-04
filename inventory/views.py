@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.db.models import Q, Sum, Count, F
 from django.core.paginator import Paginator
 from django.utils import timezone
@@ -466,4 +467,56 @@ def healthcheck(request):
     # Return JSON response
     status_code = 200 if health_status['status'] == 'healthy' else 503
     return JsonResponse(health_status, status=status_code)
+
+
+def is_superuser(user):
+    """Check if user is a superuser"""
+    return user.is_authenticated and user.is_superuser
+
+
+@login_required
+@user_passes_test(is_superuser)
+def admin_user_report(request):
+    """Admin-only view showing user statistics and activity"""
+    # Get all users with their statistics
+    users = User.objects.all().annotate(
+        products_count=Count('products', distinct=True),
+        categories_count=Count('categories', distinct=True),
+        suppliers_count=Count('suppliers', distinct=True),
+        transactions_count=Count('transactions', distinct=True),
+        active_products_count=Count('products', filter=Q(products__is_active=True), distinct=True),
+        low_stock_products_count=Count(
+            'products',
+            filter=Q(products__quantity__lte=F('products__reorder_level'), products__is_active=True),
+            distinct=True
+        ),
+        total_inventory_value=Sum(
+            F('products__quantity') * F('products__cost_price'),
+            filter=Q(products__is_active=True)
+        ),
+    ).order_by('-date_joined')
+    
+    # Calculate totals
+    total_users = users.count()
+    total_products = Product.objects.count()
+    total_categories = Category.objects.count()
+    total_suppliers = Supplier.objects.count()
+    total_transactions = Transaction.objects.count()
+    
+    # Get users with most activity
+    top_users_by_products = users.order_by('-products_count')[:5]
+    top_users_by_transactions = users.order_by('-transactions_count')[:5]
+    
+    context = {
+        'users': users,
+        'total_users': total_users,
+        'total_products': total_products,
+        'total_categories': total_categories,
+        'total_suppliers': total_suppliers,
+        'total_transactions': total_transactions,
+        'top_users_by_products': top_users_by_products,
+        'top_users_by_transactions': top_users_by_transactions,
+    }
+    
+    return render(request, 'inventory/admin_user_report.html', context)
 

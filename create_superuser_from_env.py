@@ -41,19 +41,23 @@ def create_superuser():
     if all_vars:
         print("   Found Django/Superuser variables:")
         for key, value in all_vars.items():
+            # Clean key - remove newlines and whitespace
+            key_clean = key.strip().replace('\n', '').replace('\r', '')
+            
             # Mask password for security
-            if 'PASSWORD' in key:
-                print(f"     {key} = {'*' * len(value) if value else '(empty)'}")
-                if 'SUPERUSER' in key and not password_key:
-                    password_key = key
+            if 'PASSWORD' in key_clean:
+                print(f"     {key_clean} = {'*' * len(value) if value else '(empty)'}")
+                if 'SUPERUSER' in key_clean and not password_key:
+                    password_key = key  # Use original key for dict lookup
+                    print(f"        → Using this key for password: '{key_clean}'")
             else:
-                print(f"     {key} = '{value}'")
-                if 'USERNAME' in key and 'SUPERUSER' in key and not username_key:
-                    username_key = key
-                    print(f"        → Using this key for username: '{key}'")
-                elif 'EMAIL' in key and 'SUPERUSER' in key and not email_key:
-                    email_key = key
-                    print(f"        → Using this key for email: '{key}'")
+                print(f"     {key_clean} = '{value}'")
+                if 'USERNAME' in key_clean and 'SUPERUSER' in key_clean and not username_key:
+                    username_key = key  # Use original key for dict lookup
+                    print(f"        → Using this key for username: '{key_clean}'")
+                elif 'EMAIL' in key_clean and 'SUPERUSER' in key_clean and not email_key:
+                    email_key = key  # Use original key for dict lookup
+                    print(f"        → Using this key for email: '{key_clean}'")
     else:
         print("   No DJANGO_SUPERUSER_* variables found")
     
@@ -62,22 +66,32 @@ def create_superuser():
     email_raw = ''
     password_raw = ''
     
+    # Get username - handle keys with newlines/whitespace
     if username_key and username_key in all_vars:
         username_raw = all_vars[username_key]
-        print(f"\n   ✅ Username found using key '{username_key}': '{username_raw}'")
+        print(f"\n   ✅ Username found using key '{username_key.strip().replace(chr(10), '').replace(chr(13), '')}': '{username_raw}'")
     else:
-        # Fallback: try exact key
-        username_raw = all_vars.get('DJANGO_SUPERUSER_USERNAME', '') if all_vars else ''
+        # Fallback: try exact key (cleaned)
+        exact_key = 'DJANGO_SUPERUSER_USERNAME'
+        username_raw = all_vars.get(exact_key, '') if all_vars else ''
         if not username_raw:
             # Fallback: search for the key (case-insensitive, handle whitespace)
             for key, value in os.environ.items():
-                if 'USERNAME' in key and 'SUPERUSER' in key and 'DJANGO' in key:
+                key_clean = key.strip().upper().replace('\n', '').replace('\r', '')
+                if 'USERNAME' in key_clean and 'SUPERUSER' in key_clean and 'DJANGO' in key_clean:
                     username_raw = value
                     username_key = key
                     print(f"   🔍 Found username via search: '{key}' = '{value}'")
                     break
     
+    # Clean username - remove any newlines, whitespace, etc.
     username = username_raw.strip() if username_raw else ''
+    username = username.replace('\n', '').replace('\r', '').strip()
+    
+    # Debug: Show cleaned value
+    if username_raw:
+        print(f"   Raw username: {repr(username_raw)}")
+        print(f"   Cleaned username: {repr(username)}")
     
     if email_key and email_key in all_vars:
         email_raw = all_vars[email_key]
@@ -137,29 +151,46 @@ def create_superuser():
         print("     Value: your_secure_password_here")
         return  # Exit gracefully instead of failing
     
-    # Check if user already exists
-    if User.objects.filter(username=username).exists():
-        user = User.objects.get(username=username)
-        if user.is_superuser:
-            print(f"✅ Superuser '{username}' already exists!")
-            print(f"   Email: {user.email or '(not set)'}")
-            print(f"   Is superuser: {user.is_superuser}")
-            print(f"   Is staff: {user.is_staff}")
-            return
-        else:
-            print(f"⚠️  User '{username}' exists but is not a superuser.")
-            print("   Making them a superuser...")
-            user.is_superuser = True
-            user.is_staff = True
-            user.set_password(password)
-            if email:
-                user.email = email
-            user.save()
-            print(f"✅ User '{username}' is now a superuser!")
-            return
+    # Check if user already exists (with error handling)
+    try:
+        if User.objects.filter(username=username).exists():
+            user = User.objects.get(username=username)
+            if user.is_superuser:
+                print(f"✅ Superuser '{username}' already exists!")
+                print(f"   Email: {user.email or '(not set)'}")
+                print(f"   Is superuser: {user.is_superuser}")
+                print(f"   Is staff: {user.is_staff}")
+                return
+            else:
+                print(f"⚠️  User '{username}' exists but is not a superuser.")
+                print("   Making them a superuser...")
+                user.is_superuser = True
+                user.is_staff = True
+                user.set_password(password)
+                if email:
+                    user.email = email
+                user.save()
+                print(f"✅ User '{username}' is now a superuser!")
+                return
+    except Exception as db_error:
+        print(f"⚠️  Database error while checking existing user: {db_error}")
+        print("   This might mean migrations haven't run yet or database isn't ready")
+        print("   Will attempt to create user anyway...")
+        # Continue to creation attempt
     
     # Create new superuser
     try:
+        print(f"\n🔧 Attempting to create superuser...")
+        print(f"   Username: '{username}' (length: {len(username)})")
+        print(f"   Email: '{email}' (length: {len(email)})")
+        print(f"   Password: {'*' * len(password)} (length: {len(password)})")
+        
+        # Validate before creating
+        if not username:
+            raise ValueError("Username is empty after cleaning")
+        if not password:
+            raise ValueError("Password is empty")
+        
         user = User.objects.create_superuser(
             username=username,
             email=email,
@@ -171,9 +202,18 @@ def create_superuser():
         print("\nYou can now login at:")
         print("  - Django Admin: /admin/")
         print("  - Main App: /accounts/login/")
+    except ValueError as e:
+        print(f"❌ Validation error: {e}")
+        print("   Skipping superuser creation")
+        return  # Exit gracefully
     except Exception as e:
         print(f"❌ Error creating superuser: {e}")
-        sys.exit(1)
+        print(f"   Error type: {type(e).__name__}")
+        import traceback
+        print(f"   Traceback: {traceback.format_exc()}")
+        # Don't exit - let deployment continue
+        print("   Skipping superuser creation (deployment will continue)")
+        return
 
 if __name__ == '__main__':
     create_superuser()

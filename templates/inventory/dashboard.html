@@ -13,11 +13,37 @@
         position: relative;
         height: 400px;
     }
+    
+    /* Lego-inspired card styling */
+    .stat-card h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    /* Colorful accent for profit chart */
+    #profitChart {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        border-radius: 12px;
+        padding: 1rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+<h1 class="mb-4 gradient-text">
+    <i class="bi bi-speedometer2"></i> Dashboard
+    <span class="lego-block" style="font-size: 0.8em; margin-left: 10px;">🧱</span>
+</h1>
 
 <!-- Statistics Cards -->
 <div class="row mb-4">
@@ -25,7 +51,7 @@
         <div class="card stat-card primary">
             <div class="card-body">
                 <h5 class="card-title">Total Products</h5>
-                <h2 class="text-primary">{{ total_products }}</h2>
+                <h2 style="color: #4ECDC4;">{{ total_products }}</h2>
             </div>
         </div>
     </div>
@@ -33,7 +59,7 @@
         <div class="card stat-card warning">
             <div class="card-body">
                 <h5 class="card-title">Low Stock</h5>
-                <h2 class="text-warning">{{ low_stock_products }}</h2>
+                <h2 style="color: #FFA500;">{{ low_stock_products }}</h2>
             </div>
         </div>
     </div>
@@ -41,7 +67,7 @@
         <div class="card stat-card danger">
             <div class="card-body">
                 <h5 class="card-title">Out of Stock</h5>
-                <h2 class="text-danger">{{ out_of_stock }}</h2>
+                <h2 style="color: #FF6B6B;">{{ out_of_stock }}</h2>
             </div>
         </div>
     </div>
@@ -49,7 +75,7 @@
         <div class="card stat-card success">
             <div class="card-body">
                 <h5 class="card-title">Total Value</h5>
-                <h2 class="text-success">${{ total_value|floatformat:2 }}</h2>
+                <h2 style="color: #95E1D3;">${{ total_value|floatformat:2 }}</h2>
             </div>
         </div>
     </div>

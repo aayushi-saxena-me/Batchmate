@@ -13,31 +13,218 @@
     {% block extra_css %}{% endblock %}
     
     <style>
+        :root {
+            --lego-red: #FF6B6B;
+            --lego-blue: #4ECDC4;
+            --lego-yellow: #FFE66D;
+            --lego-green: #95E1D3;
+            --lego-purple: #A8E6CF;
+            --lego-orange: #FF8B94;
+            --lego-pink: #FFB6C1;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --card-hover-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
         .sidebar {
             min-height: 100vh;
-            background-color: #f8f9fa;
-            border-right: 1px solid #dee2e6;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-right: none;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            color: white;
         }
+        
+        .sidebar h4 {
+            color: white;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
         .nav-link {
-            color: #495057;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
+        
         .nav-link:hover {
-            color: #007bff;
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
         }
+        
         .nav-link.active {
-            color: #007bff;
+            color: white;
+            background: rgba(255, 255, 255, 0.25);
             font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+        
         .main-content {
             padding: 2rem;
+            background: transparent;
         }
+        
         .stat-card {
-            border-left: 4px solid;
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+            background: white;
         }
-        .stat-card.primary { border-left-color: #007bff; }
-        .stat-card.success { border-left-color: #28a745; }
-        .stat-card.warning { border-left-color: #ffc107; }
-        .stat-card.danger { border-left-color: #dc3545; }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: var(--accent-color);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover-shadow);
+        }
+        
+        .stat-card.primary { 
+            --accent-color: var(--lego-blue);
+        }
+        .stat-card.primary::before { background: var(--lego-blue); }
+        .stat-card.primary .card-title { color: var(--lego-blue); }
+        
+        .stat-card.success { 
+            --accent-color: var(--lego-green);
+        }
+        .stat-card.success::before { background: var(--lego-green); }
+        .stat-card.success .card-title { color: var(--lego-green); }
+        
+        .stat-card.warning { 
+            --accent-color: var(--lego-yellow);
+        }
+        .stat-card.warning::before { background: var(--lego-yellow); }
+        .stat-card.warning .card-title { color: #FFA500; }
+        
+        .stat-card.danger { 
+            --accent-color: var(--lego-red);
+        }
+        .stat-card.danger::before { background: var(--lego-red); }
+        .stat-card.danger .card-title { color: var(--lego-red); }
+        
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .card:hover {
+            box-shadow: var(--card-hover-shadow);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0 !important;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+        
+        .btn {
+            border-radius: 12px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--lego-green) 0%, #4ECDC4 100%);
+            border: none;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--lego-yellow) 0%, #FFD93D 100%);
+            border: none;
+            color: #333;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--lego-red) 0%, #FF5252 100%);
+            border: none;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, var(--lego-blue) 0%, #26A69A 100%);
+            border: none;
+        }
+        
+        h1, h2, h3, h4, h5 {
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .badge {
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-weight: 600;
+        }
+        
+        /* Lego block animation */
+        @keyframes lego-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .lego-block {
+            display: inline-block;
+            animation: lego-bounce 2s ease-in-out infinite;
+        }
+        
+        .lego-block:nth-child(2) { animation-delay: 0.2s; }
+        .lego-block:nth-child(3) { animation-delay: 0.4s; }
+        .lego-block:nth-child(4) { animation-delay: 0.6s; }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
     </style>
 </head>
 <body>

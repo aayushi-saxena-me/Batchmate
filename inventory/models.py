@@ -67,7 +67,7 @@ class Product(models.Model):
 
     class Meta:
         ordering = ['name']
-        unique_together = [['sku', 'created_by']]  # SKU unique per user
+        # SKU can be duplicated per user - multiple products can share the same SKU
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['name']),

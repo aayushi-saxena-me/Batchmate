@@ -198,6 +198,30 @@
     </div>
 </div>
 
+<!-- Profit Over Time Chart -->
+{% if profit_dates %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> Profit Over Time (Cumulative)</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container-large">
+                    <canvas id="profitChart"></canvas>
+                </div>
+                <div class="mt-3 text-center">
+                    <p class="text-muted mb-0">
+                        <strong>Total Profit:</strong> 
+                        <span class="text-success">${{ total_profit|floatformat:2 }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Top Products Chart -->
 {% if top_product_names %}
 <div class="row mb-4">
@@ -262,6 +286,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -411,6 +436,67 @@ if (transactionTypesCtx) {
 }
 {% endif %}
 
+// Profit Over Time Chart (Line - Cumulative)
+{% if profit_dates %}
+const profitCtx = document.getElementById('profitChart');
+if (profitCtx) {
+    new Chart(profitCtx, {
+        type: 'line',
+        data: {
+            labels: {{ profit_dates }},
+            datasets: [{
+                label: 'Cumulative Profit ($)',
+                data: {{ profit_values }},
+                borderColor: 'rgba(40, 167, 69, 1)',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Profit: $' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(0);
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cumulative Profit ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
 // Top Products by Value Chart (Horizontal Bar)
 {% if top_product_names %}
 const topProductsCtx = document.getElementById('topProductsChart');
@@ -458,6 +544,5 @@ if (topProductsCtx) {
 }
 {% endif %}
 </script>
-{% endblock %}
 {% endblock %}
 

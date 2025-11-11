@@ -105,6 +105,37 @@ def dashboard(request):
     top_product_names = [p.name[:20] + '...' if len(p.name) > 20 else p.name for p in top_products_by_value]
     top_product_values = [float(p.quantity * p.cost_price) for p in top_products_by_value]
     
+    # Chart Data: Profit Over Time (from OUT transactions - sales)
+    # Get all OUT transactions (sales) for the user
+    sales_transactions = Transaction.objects.filter(
+        created_by=request.user,
+        transaction_type='OUT'
+    ).select_related('product').order_by('created_at')
+    
+    # Calculate profit per transaction and group by date
+    profit_by_date = {}
+    cumulative_profit = 0
+    
+    for transaction in sales_transactions:
+        # Calculate profit: (selling_price - cost_price) * quantity
+        profit = float((transaction.product.selling_price - transaction.product.cost_price) * abs(transaction.quantity))
+        cumulative_profit += profit
+        
+        # Extract date
+        date_key = transaction.created_at.date()
+        
+        # Store cumulative profit for each date
+        if date_key not in profit_by_date:
+            profit_by_date[date_key] = 0
+        profit_by_date[date_key] = cumulative_profit
+    
+    # Sort by date and prepare data for chart
+    profit_dates = []
+    profit_values = []
+    for date_key in sorted(profit_by_date.keys()):
+        profit_dates.append(date_key.strftime('%m/%d'))
+        profit_values.append(profit_by_date[date_key])
+    
     context = {
         'total_products': total_products,
         'low_stock_products': low_stock_products,
@@ -123,6 +154,9 @@ def dashboard(request):
         'trend_counts': mark_safe(json.dumps(trend_counts)),
         'top_product_names': mark_safe(json.dumps(top_product_names)),
         'top_product_values': mark_safe(json.dumps(top_product_values)),
+        'profit_dates': mark_safe(json.dumps(profit_dates)),
+        'profit_values': mark_safe(json.dumps(profit_values)),
+        'total_profit': cumulative_profit,
     }
     return render(request, 'inventory/dashboard.html', context)
 
